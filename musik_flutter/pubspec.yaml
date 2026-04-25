@@ -1,0 +1,29 @@
+name: musik_flutter
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  sensors_plus: ^4.0.2
+  shared_preferences: ^2.2.2
+  google_generative_ai: ^0.0.1-dev
+  http: ^1.6.0
+  audioplayers: ^5.2.1
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  intl: ^0.20.2
+  local_auth: ^2.1.6
+  vibration: ^1.8.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
