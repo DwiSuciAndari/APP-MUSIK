@@ -26,6 +26,8 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Future<void> _fetchMusic(String query) async {
+    if (query.trim().isEmpty) return; 
+
     setState(() => _isLoading = true);
     try {
       final res = await searchMusic(query);
@@ -41,8 +43,12 @@ class _SearchPageState extends State<SearchPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bg,
+
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         centerTitle: true,
         elevation: 0,
         backgroundColor: primaryBlue,
@@ -50,35 +56,8 @@ class _SearchPageState extends State<SearchPage> {
           "Music Discovery",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.white),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text("Logout"),
-                  content: const Text("Apakah Anda yakin ingin keluar?"),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Batal"),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushNamedAndRemoveUntil(
-                            context, '/login', (route) => false);
-                      },
-                      child: const Text("Keluar",
-                          style: TextStyle(color: Colors.red)),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
       ),
+
       body: Column(
         children: [
           Padding(
@@ -88,7 +67,6 @@ class _SearchPageState extends State<SearchPage> {
                 borderRadius: BorderRadius.circular(15),
                 boxShadow: [
                   BoxShadow(
-                    // FIX: Gunakan withValues agar tidak deprecated
                     color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
@@ -98,9 +76,16 @@ class _SearchPageState extends State<SearchPage> {
               child: TextField(
                 controller: _controller,
                 onSubmitted: (value) => _fetchMusic(value),
+
                 decoration: InputDecoration(
                   hintText: "Cari lagu atau artis...",
                   prefixIcon: const Icon(Icons.search, color: primaryBlue),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.send, color: primaryBlue),
+                    onPressed: () {
+                      _fetchMusic(_controller.text);
+                    },
+                  ),
                   filled: true,
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
@@ -111,87 +96,98 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
           ),
+
           Expanded(
             child: _isLoading
                 ? const Center(
                     child: CircularProgressIndicator(color: softPink),
                   )
-                : GridView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 15),
-                    itemCount: songs.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.7,
-                      mainAxisSpacing: 15,
-                      crossAxisSpacing: 15,
-                    ),
-                    itemBuilder: (_, i) {
-                      final s = songs[i];
-                      return GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => DetailPage(song: s),
-                          ),
+                : songs.isEmpty
+                    ? const Center(
+                        child: Text("Tidak ada hasil 😢"),
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 15),
+                        itemCount: songs.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.7,
+                          mainAxisSpacing: 15,
+                          crossAxisSpacing: 15,
                         ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.03),
-                                blurRadius: 8,
+                        itemBuilder: (_, i) {
+                          final s = songs[i];
+                          return GestureDetector(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DetailPage(song: s),
                               ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(20),
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.03),
+                                    blurRadius: 8,
                                   ),
-                                  child: Image.network(
-                                    s['album']['cover_medium'] ??
-                                        s['album']['cover'],
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
+                                ],
                               ),
-                              Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      s['title'],
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: deepBrown,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(20),
+                                      ),
+                                      child: Image.network(
+                                        s['album']?['cover_medium'] ??
+                                            s['album']?['cover'] ??
+                                            "",
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(Icons.music_note,
+                                                size: 50),
                                       ),
                                     ),
-                                    Text(
-                                      s['artist']['name'],
-                                      style: const TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 12,
-                                      ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          s['title'],
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: deepBrown,
+                                          ),
+                                        ),
+                                        Text(
+                                          s['artist']['name'],
+                                          style: const TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                            ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),

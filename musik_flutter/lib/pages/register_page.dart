@@ -15,8 +15,9 @@ class _RegisterPageState extends State<RegisterPage> {
   final passwordController = TextEditingController();
 
   void register() async {
-    String email = emailController.text;
-    String pass = passwordController.text;
+    String username = usernameController.text.trim();
+    String email = emailController.text.trim();
+    String pass = passwordController.text.trim();
 
     if (!email.endsWith("@gmail.com")) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -32,11 +33,13 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    await DBHelper.register(
-      usernameController.text,
-      email,
-      pass,
-    );
+    await DBHelper.register({
+      'username': username,
+      'password': pass,
+      'email': email,
+      'phone': '',
+      'bio': '', 
+    });
 
     if (!mounted) return;
 
@@ -68,13 +71,9 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  "Register",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const Text("Register",
+                    style:
+                        TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 25),
                 TextField(
                   controller: usernameController,

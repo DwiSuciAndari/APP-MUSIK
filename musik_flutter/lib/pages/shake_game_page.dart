@@ -10,6 +10,7 @@ class ShakeGamePage extends StatefulWidget {
 
 class _ShakeGamePageState extends State<ShakeGamePage> {
   int score = 0;
+  bool isSimulator = true;
 
   @override
   void initState() {
@@ -30,11 +31,31 @@ class _ShakeGamePageState extends State<ShakeGamePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Shake Game")),
-      body: Center(
-        child: Text(
-          "Score: $score",
-          style: const TextStyle(fontSize: 30),
-        ),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Center(
+            child: Text(
+              "Score: $score",
+              style: const TextStyle(fontSize: 30),
+            ),
+          ),
+          const SizedBox(height: 20),
+          if (isSimulator)
+            const Text(
+              "Mode Emulator: Gunakan tombol simulasi",
+              style: TextStyle(color: Colors.grey),
+            ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                score++;
+              });
+            },
+            child: const Text("Simulasi Shake"),
+          ),
+        ],
       ),
     );
   }

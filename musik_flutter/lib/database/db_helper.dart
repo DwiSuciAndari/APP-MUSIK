@@ -1,63 +1,57 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
 
 class DBHelper {
   static Database? _db;
 
-  static Future<Database> get db async {
+  static Future<Database> get database async {
     if (_db != null) return _db!;
-    _db = await initDb();
+    _db = await initDB();
     return _db!;
   }
 
-  static Future<Database> initDb() async {
+  static Future<Database> initDB() async {
     final path = join(await getDatabasesPath(), 'app.db');
 
-    return openDatabase(
+    return await openDatabase(
       path,
       version: 1,
-      onCreate: (db, v) async {
+      onCreate: (db, version) async {
         await db.execute('''
-        CREATE TABLE users(
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          username TEXT,
-          email TEXT,
-          password TEXT
-        )
+          CREATE TABLE users(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            password TEXT,
+            email TEXT,
+            phone TEXT,
+            bio TEXT
+          )
         ''');
       },
     );
   }
 
-  static String encrypt(String password) {
-    return sha256.convert(utf8.encode(password)).toString();
+  // 🔥 REGISTER
+  static Future<void> register(Map<String, dynamic> data) async {
+    final db = await database;
+    await db.insert('users', data);
   }
 
-  static Future register(String u, String e, String p) async {
-    final dbClient = await db;
+  // 🔥 LOGIN (RETURN USER DATA)
+  static Future<Map<String, dynamic>?> login(
+      String username, String password) async {
+    final db = await database;
 
-    await dbClient.insert(
-      'users',
-      {
-        'username': u,
-        'email': e,
-        'password': encrypt(p),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  static Future<bool> login(String u, String p) async {
-    final dbClient = await db;
-
-    final res = await dbClient.query(
+    final result = await db.query(
       'users',
       where: 'username = ? AND password = ?',
-      whereArgs: [u, encrypt(p)],
+      whereArgs: [username, password],
     );
 
-    return res.isNotEmpty;
+    if (result.isNotEmpty) {
+      return result.first;
+    } else {
+      return null;
+    }
   }
 }

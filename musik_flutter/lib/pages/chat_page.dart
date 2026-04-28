@@ -84,7 +84,7 @@ class _ChatPageState extends State<ChatPage> {
 
   void _handleSend() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isLoading) return;
 
     setState(() {
       _messages.add({"role": "user", "text": text});
@@ -93,13 +93,21 @@ class _ChatPageState extends State<ChatPage> {
     _controller.clear();
     _scrollToBottom();
 
-    final response = await _aiService.getChatResponse(text);
-
-    setState(() {
-      _messages.add({"role": "bot", "text": response});
-      _isLoading = false;
-    });
-    _scrollToBottom();
+    try {
+      final response = await _aiService.getChatResponse(text);
+      setState(() {
+        _messages.add({"role": "bot", "text": response});
+      });
+    } catch (e) {
+      setState(() {
+        _messages.add({"role": "bot", "text": "Error: Gagal terhubung ke AI."});
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+      _scrollToBottom();
+    }
   }
 
   @override
@@ -254,7 +262,7 @@ class _ChatPageState extends State<ChatPage> {
               padding: const EdgeInsets.all(12),
               decoration: const BoxDecoration(
                 color: Color(0xFF7DA7D9),
-                shape: BoxShape.circle, // FIX: Paket BoxShape, bukan BoxType
+                shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                       color: Color(0xFF7DA7D9),

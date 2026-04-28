@@ -1,42 +1,69 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-class ConverterPage extends StatefulWidget {
-  const ConverterPage({super.key});
+import '../config/api_config.dart';
+
+class ConvertPage extends StatefulWidget {
+  const ConvertPage({super.key});
+
   @override
-  State<ConverterPage> createState() => _ConverterPageState();
+  State<ConvertPage> createState() => _ConvertPageState();
 }
 
-class _ConverterPageState extends State<ConverterPage> {
-  final _ctrl = TextEditingController();
-  String from = "USD", to = "IDR";
-  double res = 0.0;
+class _ConvertPageState extends State<ConvertPage> {
+  final TextEditingController _ctrl = TextEditingController();
 
-  final Map<String, double> rates = {
-    "USD_IDR": 15500.0,
-    "IDR_USD": 1 / 15500.0,
-    "USD_EUR": 0.92,
-    "EUR_USD": 1 / 0.92,
-    "IDR_EUR": 1 / 17000.0,
-    "EUR_IDR": 17000.0,
-  };
+  double res = 0;
+  String from = "USD";
+  String to = "IDR";
+  bool loading = false;
 
-  void _convert() {
-    double amt = double.tryParse(_ctrl.text.replaceAll(',', '')) ?? 0;
-    if (from == to) {
-      setState(() => res = amt);
-      return;
+  Future<void> _convert() async {
+    if (_ctrl.text.trim().isEmpty) return;
+
+    setState(() => loading = true);
+
+    try {
+      String fromLower = from.toLowerCase();
+      String toLower = to.toLowerCase();
+
+      final url = Uri.parse(
+        "https://latest.currency-api.pages.dev/v1/currencies/$fromLower.json",
+      );
+
+      print("CALL API: $url");
+
+      final response = await http.get(url);
+
+      print("STATUS: ${response.statusCode}");
+
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        // Contoh: data['usd']['idr']
+        final rate = data[fromLower][toLower];
+
+        // 4. Ubah inputan user menjadi angka (double)
+        final amount = double.parse(_ctrl.text);
+
+        setState(() {
+          res = (amount * rate).toDouble();
+        });
+      } else {
+        throw Exception("API error dengan status ${response.statusCode}");
+      }
+    } catch (e) {
+      print("ERROR: $e");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Gagal mengambil data kurs ❌")),
+      );
     }
-    setState(() => res = amt * (rates["${from}_$to"] ?? 1.0));
-  }
 
-  void _switch() {
-    setState(() {
-      var tmp = from;
-      from = to;
-      to = tmp;
-      _convert(); 
-    });
+    setState(() => loading = false);
   }
 
   @override
@@ -44,127 +71,142 @@ class _ConverterPageState extends State<ConverterPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F5F7),
       appBar: AppBar(
-        title: const Text("Currency Converter",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF7DA7D9),
-        centerTitle: true,
-        automaticallyImplyLeading: false, // FIX: Biar gak layar hitam
+        title: const Text("Currency Converter"),
+        backgroundColor: const Color(0xFF6C63FF),
       ),
-      body: SingleChildScrollView(
+      body: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(children: [
-          Card(
-            elevation: 5,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-            child: Padding(
-              padding: const EdgeInsets.all(25),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("Amount",
-                        style: TextStyle(
-                            color: Colors.grey, fontWeight: FontWeight.bold)),
-                    TextField(
-                      controller: _ctrl,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.bold),
-                      decoration: const InputDecoration(
-                          hintText: "Enter amount",
-                          prefixIcon: Icon(Icons.account_balance_wallet,
-                              color: Color(0xFF7DA7D9))),
-                      onChanged: (_) => _convert(),
-                    ),
-                    const SizedBox(height: 30),
-                    Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _drop(
-                              from,
-                              (v) => setState(() {
-                                    from = v!;
-                                    _convert();
-                                  })),
-                          GestureDetector(
-                            onTap: _switch,
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                  color:
-                                      Colors.pinkAccent.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle),
-                              child: const Icon(Icons.swap_horiz,
-                                  color: Colors.pinkAccent, size: 30),
-                            ),
-                          ),
-                          _drop(
-                              to,
-                              (v) => setState(() {
-                                    to = v!;
-                                    _convert();
-                                  })),
-                        ]),
-                  ]),
+        child: Column(
+          children: [
+            TextField(
+              controller: _ctrl,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: "Masukkan jumlah",
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 30),
-          ElevatedButton(
-            onPressed: _convert,
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.pinkAccent.shade100,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 55),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15))),
-            child: const Text("Convert Now",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(height: 40),
-          const Text("Result",
-              style: TextStyle(fontSize: 16, color: Colors.grey)),
-          const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField(
+                    value: from,
+                    items: ["USD", "IDR", "EUR"]
+                        .map((e) => DropdownMenuItem(
+                              value: e,
+                              child: Text(e),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() => from = v.toString()),
+                    decoration: const InputDecoration(labelText: "From"),
+                  ),
+                ),
+                
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 5,
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.swap_horiz, 
+                        size: 28, 
+                        color: Color(0xFF6C63FF)
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          String temp = from;
+                          from = to;
+                          to = temp;
+
+                          res = 0; 
+                        });
+                      },
+                    ),
+                  ),
+                ),
+
+                Expanded(
+                  child: DropdownButtonFormField(
+                    value: to,
+                    items: ["USD", "IDR", "EUR"]
+                        .map((e) => DropdownMenuItem(
+                              value: e,
+                              child: Text(e),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() => to = v.toString()),
+                    decoration: const InputDecoration(labelText: "To"),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 25),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: const Color(0xFF6C63FF),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: loading ? null : _convert,
+                child: loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        "Convert",
+                        style: TextStyle(fontSize: 16),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10)
-                ]),
-            child: Text(
-              "${NumberFormat("#,###.##").format(res)} $to",
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF4E342E)),
+                    blurRadius: 10,
+                    color: Colors.black.withOpacity(0.05),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const Text("Hasil",
+                      style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  const SizedBox(height: 10),
+                  Text(
+                    res == 0
+                        ? "-"
+                        : "${NumberFormat("#,###.##").format(res)} $to",
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ]),
-      ),
-    );
-  }
-
-  Widget _drop(String val, ValueChanged<String?> cb) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-      decoration: BoxDecoration(
-          color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
-      child: DropdownButton<String>(
-        value: val,
-        underline: const SizedBox(),
-        icon: const Icon(Icons.keyboard_arrow_down),
-        items: ["USD", "IDR", "EUR"]
-            .map((e) => DropdownMenuItem(
-                value: e,
-                child: Text(e,
-                    style: const TextStyle(fontWeight: FontWeight.bold))))
-            .toList(),
-        onChanged: cb,
+          ],
+        ),
       ),
     );
   }

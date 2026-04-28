@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../database/db_helper.dart';
-import 'home_page.dart';
 import 'register_page.dart';
+import '../services/notif_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,18 +17,28 @@ class _LoginPageState extends State<LoginPage> {
   final passwordController = TextEditingController();
 
   void login() async {
-    bool success = await DBHelper.login(
-      usernameController.text,
-      passwordController.text,
+    final user = await DBHelper.login(
+      usernameController.text.trim(),
+      passwordController.text.trim(),
     );
 
     if (!mounted) return;
 
-    if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
+    if (user != null) {
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setBool('isLogin', true);
+      await prefs.setString('name', user['username'] ?? '');
+      await prefs.setString('email', user['email'] ?? '');
+      await prefs.setString('phone', user['phone'] ?? '');
+      await prefs.setString('bio', user['bio'] ?? '');
+
+      NotifService.show(
+        "Login Berhasil",
+        "Selamat datang ${user['username']} 👋",
       );
+
+      Navigator.pushReplacementNamed(context, '/home');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Username atau password salah")),
@@ -49,10 +60,10 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (success) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
-        );
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLogin', true);
+
+        Navigator.pushReplacementNamed(context, '/home');
       }
     }
   }
@@ -81,10 +92,7 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 const Text(
                   "Login",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 25),
                 TextField(

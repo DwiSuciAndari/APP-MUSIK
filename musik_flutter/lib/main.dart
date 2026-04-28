@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'pages/home_page.dart';
 import 'pages/login_page.dart';
+import 'services/notif_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await NotifService.init();
 
   final prefs = await SharedPreferences.getInstance();
   bool isLogin = prefs.getBool('isLogin') ?? false;
@@ -20,7 +23,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: isLogin ? const HomePage() : const LoginPage(),
+
+      initialRoute: isLogin ? '/home' : '/login',
+
+      routes: {
+        '/login': (context) => const LoginPage(),
+        '/home': (context) => const HomePage(),
+      },
     );
   }
 }
